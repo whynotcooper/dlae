@@ -1,0 +1,18 @@
+positive:
+  enabled: True
+  shot_capacity: 3
+  alpha: 7
+  beta: 7.45 
+
+learning_rate:
+  text: 0.0006
+  image: 0.0006
+  align: 0.2
+
+alpha: [ 3 ]
+
+alpha1: [0.5,1]
+
+epoch : [5e-8, 5e-3]
+
+belta : [ 3 ]

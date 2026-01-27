@@ -1,0 +1,19 @@
+# Configuration for DPE Hyperparameters
+
+# --- Positive Cache Configuration ---
+positive:
+  enabled: True
+  shot_capacity: 3
+  alpha: 5.0
+  beta: 8.0 
+
+learning_rate:
+  text: 0.00005
+  image: 0.00005
+  align: 0.2
+
+alpha: [ 2 ]
+
+alpha1: [1.5,0.3]
+epoch: [1e-7, 1e-7]
+belta: [ 1]
