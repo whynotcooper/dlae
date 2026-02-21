@@ -1,11 +1,11 @@
-def ExpOneOverXMinusOne(x,alpha=2.5,belta=0):
-        return torch.exp( -alpha*x+belta)
-def Logits_adjustment(logits,dif,counter,count,alpha):
-    # 计算每个类别的概率
-    prob=counter/count
-    # 计算每个类别的权重
-    logits=logits*ExpOneOverXMinusOne(x=prob,alpha=-alpha*dif+alpha)
+def exp_decay(x, alpha=2.5, beta=0):
+    return torch.exp(-alpha * x + beta)
+
+def logits_adjustment(logits, dif, counter, count, alpha):
+    prob = counter / count
+    logits = logits * exp_decay(x=prob, alpha=-alpha * dif + alpha)
     return logits
+
 def Init_counter(cache_size, device='cpu'):
     counter = torch.ones(cache_size, dtype=torch.int32, device=device)
     return counter
@@ -13,7 +13,7 @@ def Init_counter(cache_size, device='cpu'):
 def update_counter(counter, pred):
     counter[pred] += 1
     return counter
-def cos_loss(x, y):
+def cos_sim(x, y):
     if x.dim()==2: 
         return F.cosine_similarity(x, y,dim=1)
     else:
@@ -44,7 +44,7 @@ def get_clip_logits_2(images, clip_model, clip_weights,counter,count,alpha=1,mea
         
         #caculate the pred2 and loss 2
         # logits[n]=logtis[n]*(-a*(1+conf_past-conf_now)*prob[n])  如果现在conf_now小，加大 logits adjustment力度 
-        clip_logits=Logits_adjustment(clip_logits,prob_map2.squeeze(0)[pred2].detach().cpu().item()-mean_loss[pred2].detach().cpu().item(),counter,count,alpha)
+        clip_logits=logits_adjustment(clip_logits,prob_map2.squeeze(0)[pred2].detach().cpu().item()-mean_loss[pred2].detach().cpu().item(),counter,count,alpha)
         batch_entropy = softmax_entropy(clip_logits)
         selected_idx = torch.argsort(batch_entropy, descending=False)[:int(batch_entropy.size()[0] * 0.1)]
         output = clip_logits[selected_idx]
@@ -60,7 +60,7 @@ def get_clip_logits_2(images, clip_model, clip_weights,counter,count,alpha=1,mea
         output2=clip_logits
         # caculate the pred2 and loss 2
  
-        clip_logits=Logits_adjustment(clip_logits,prob_map2.squeeze(0)[pred2].detach().cpu().item()-mean_loss[pred2].detach().cpu().item(),counter,count,alpha)
+        clip_logits=logits_adjustment(clip_logits,prob_map2.squeeze(0)[pred2].detach().cpu().item()-mean_loss[pred2].detach().cpu().item(),counter,count,alpha)
         output=clip_logits
         loss = softmax_entropy(clip_logits)
         prob_map = clip_logits.softmax(1)
@@ -68,15 +68,15 @@ def get_clip_logits_2(images, clip_model, clip_weights,counter,count,alpha=1,mea
         
     #reflection 机制 判断是否相等
     if (pred == pred2) :
-        sim=cos_loss(image_features,clip_weights.mT[pred])
-        conf=prob_map[0][pred]
+        sim=cos_sim(image_features,clip_weights.mT[pred])
+
         loss1=loss
 
     else:  
         doubt=True
-        sim=cos_loss(clip_weights.mT[pred],clip_weights.mT[pred2])
+        sim=cos_sim(clip_weights.mT[pred],clip_weights.mT[pred2])
 
-        conf=prob_map[0][pred]
+
         
         loss1=loss*torch.exp(-alpha1*sim) 
 
@@ -115,7 +115,7 @@ def get_clip_logits_3(image_features, clip_model, clip_weights,counter,count,alp
         pred2 = int(output2.mean(0).unsqueeze(0).topk(1, 1, True, True)[1].t())
         
         #caculate the pred2 and loss 2
-        clip_logits=Logits_adjustment(clip_logits,prob_map2.squeeze(0)[pred2].detach().cpu().item()-mean_loss[pred2].detach().cpu().item(),counter,count,alpha)
+        clip_logits=logits_adjustment(clip_logits,prob_map2.squeeze(0)[pred2].detach().cpu().item()-mean_loss[pred2].detach().cpu().item(),counter,count,alpha)
         batch_entropy = softmax_entropy(clip_logits)
         selected_idx = torch.argsort(batch_entropy, descending=False)[:int(batch_entropy.size()[0] * 0.1)]
         output = clip_logits[selected_idx]
@@ -132,7 +132,7 @@ def get_clip_logits_3(image_features, clip_model, clip_weights,counter,count,alp
         output2=clip_logits
         # caculate the pred2 and loss 2
  
-        clip_logits=Logits_adjustment(clip_logits,prob_map2.squeeze(0)[pred2].detach().cpu().item()-mean_loss[pred2].detach().cpu().item(),counter,count,alpha)
+        clip_logits=logits_adjustment(clip_logits,prob_map2.squeeze(0)[pred2].detach().cpu().item()-mean_loss[pred2].detach().cpu().item(),counter,count,alpha)
         output=clip_logits
         loss = softmax_entropy(clip_logits)
         prob_map = clip_logits.softmax(1)
@@ -385,4 +385,7 @@ def build_test_data_loader(dataset_name, root_path, preprocess):
         raise "Dataset is not from the chosen list"
     
     return test_loader, dataset.classnames, dataset.template, dataset.cupl_path
+
+
+
 

@@ -177,8 +177,47 @@ def compute_cache_logits(image_features, cache_keys, cache_values, alpha, beta, 
     affinity = image_features @ cache_keys
     cache_logits = ((-1) * (beta - beta * affinity)).exp() @ cache_values
     return alpha * cache_logits
+def update_cache2(cache, pred, features_loss_time,time_now, shot_capacity, include_prob_map=False,alpha=2000):
+    """Update cache with new features and loss, maintaining the maximum shot capacity."""
+    with torch.no_grad():
+        item = features_loss_time if not include_prob_map else features_loss_time[:2] + [features_loss_time[2]]
+        if pred in cache:
+            if len(cache[pred]) < shot_capacity:
+                cache[pred].append(item)
+                
+            else:
+               for i in range(len(cache[pred])):
+                   cache[pred][i][1] = exp_loss(cache[pred][i][1],time_now-cache[pred][i][2],alpha)
+                   cache[pred][i][2] = time_now
+               cache[pred] = sorted(cache[pred], key=operator.itemgetter(1))
+               if features_loss_time[1] < cache[pred][-1][1]:
+                   cache[pred][-1] = item
+                   cache[pred] = sorted(cache[pred], key=operator.itemgetter(1))
 
+        else:
+            cache[pred] = [item]
+        return
+    
+def update_cache2(cache, pred, features_loss_time,time_now, shot_capacity, include_prob_map=False,alpha=20000000):
+    """Update cache with new features and loss, maintaining the maximum shot capacity."""
+    with torch.no_grad():
+        item = features_loss_time if not include_prob_map else features_loss_time[:2] + [features_loss_time[2]]
+        if pred in cache:
+            if len(cache[pred]) < shot_capacity:
+                cache[pred].append(item)
+                
+            else:
+               for i in range(len(cache[pred])):
+                   cache[pred][i][1] = exp_loss(cache[pred][i][1],time_now-cache[pred][i][2],alpha)
+                   cache[pred][i][2] = time_now
+               cache[pred] = sorted(cache[pred], key=operator.itemgetter(1))
+               if features_loss_time[1] < cache[pred][-1][1]:
+                   cache[pred][-1] = item
+                   cache[pred] = sorted(cache[pred], key=operator.itemgetter(1))
 
+        else:
+            cache[pred] = [item]
+        return
 def exp_loss(x, time, alpha):
     # 确保 x, time, alpha 都是 PyTorch 张量
     x = torch.tensor(x) if not isinstance(x, torch.Tensor) else x
@@ -191,9 +230,72 @@ def compute_cache_logits(image_features, cache_keys, cache_values, alpha, beta, 
     affinity = image_features @ cache_keys
     cache_logits = ((-1) * (beta - beta * affinity)).exp() @ cache_values
     return alpha * cache_logits
+def update_cache2(cache, pred, features_loss_time,time_now, shot_capacity, include_prob_map=False,alpha=100):
+    """Update cache with new features and loss, maintaining the maximum shot capacity."""
+    with torch.no_grad():
+        item = features_loss_time if not include_prob_map else features_loss_time[:2] + [features_loss_time[2]]
+        if pred in cache:
+            if len(cache[pred]) < shot_capacity:
+                cache[pred].append(item)
+                
+            else:
+               for i in range(len(cache[pred])):
+                   cache[pred][i][1] = exp_loss(cache[pred][i][1],time_now-cache[pred][i][2],alpha)
+                   cache[pred][i][2] = time_now
+               cache[pred] = sorted(cache[pred], key=operator.itemgetter(1))
+               if features_loss_time[1] < cache[pred][-1][1]:
+                   cache[pred][-1] = item
+                   cache[pred] = sorted(cache[pred], key=operator.itemgetter(1))
 
+        else:
+            cache[pred] = [item]
+        return
+def update_cache_joint(cache_memory, ent_cache, align_cache, ent_pred, align_pred):
+    """Merge entropy cache and align cache into unified cache memory and update prototypes."""
+    total_shot = cache_memory.size(1)  
+    update_classes = set()
+    if ent_pred is not None:
+        update_classes.add(int(ent_pred))
+    if align_pred is not None:
+        update_classes.add(int(align_pred))
 
+    for cls in update_classes:
+        write_idx = 0
+        if align_cache and cls in align_cache:
+            for item in align_cache[cls]:
+                feature=item[0]
 
+                if write_idx >= total_shot: break
+                if feature.dim() == 2: feature = feature.squeeze(0)
+                cache_memory[cls, write_idx, :] = feature
+                write_idx += 1
+        if ent_cache and cls in ent_cache and write_idx < total_shot:
+            for item in ent_cache[cls]:
+                feature=item[0]
+                if write_idx >= total_shot: break
+                if feature.dim() == 2: feature = feature.squeeze(0)
+                cache_memory[cls, write_idx, :] = feature
+                write_idx += 1
+
+        if write_idx < total_shot:
+            cache_memory[cls, write_idx:, :].zero_()
+
+def get_cache_pred(image_features, cache_memory, global_text_feat):
+    """Compute image prediction using adaptive similarity between positive caches and global text features."""
+    img_feat = image_features[:1].to(dtype=cache_memory.dtype, device=cache_memory.device, non_blocking=True)
+    global_text_feat = global_text_feat.to(dtype=cache_memory.dtype, device=cache_memory.device, non_blocking=True)
+
+    cached_image_feat = torch.cat((cache_memory, global_text_feat), dim=1)
+    cached_image_feat_KV = cached_image_feat / cached_image_feat.norm(dim=-1, keepdim=True)
+    cached_image_feat_KV[cached_image_feat.sum(-1) == 0] = 0
+
+    similarity_score = (img_feat * cached_image_feat_KV).sum(-1)
+    similarity_score = torch.exp(-5.5 * (-similarity_score + 1))
+    adaptive_image_feat = (cached_image_feat_KV * similarity_score.unsqueeze(-1)).sum(1)
+    adaptive_image_feat = adaptive_image_feat / adaptive_image_feat.norm(dim=-1, keepdim=True)
+    logits = 100. * adaptive_image_feat @ img_feat.unsqueeze(-1)
+    logits = logits[:,:,0]
+    return logits.softmax(dim=1)
 class TextResidue(nn.Module):
     def __init__(self, clip_weights):
         super(TextResidue, self).__init__()
@@ -305,18 +407,23 @@ def update_cache3(cache, pred, features_loss_time_doubt,time_now, shot_capacity,
 def run_test_dlae(pos_cfg, lr_cfg, loader, clip_model, clip_weights, dataset_name,alpha,alpha1,epoch):
     with torch.cuda.amp.autocast():
         pos_cache, accuracies = {}, []
-
+        pos_cache2={}
+        all_counter=[]
         
         my_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')  # 检查是否有GPU可用
         # Unpack all hyperparameters
         pos_enabled = pos_cfg['enabled']
-
+        pred_vanilla, pred_cache, pred_pro, labels= [], [], [], []
         if pos_enabled:
             pos_params = {k: pos_cfg[k] for k in ['shot_capacity', 'alpha', 'beta']}
 
         clip_weights_global = clip_weights.clone()
         num_avg = 0
+        total = len(loader)
 
+        losses = []
+        all_clip_weights = []
+        distances = []
         cache_size = clip_weights.shape[1]
         # 用来统计每一个类别的伪标签数量
         counter = Init_counter(cache_size, my_device)
@@ -327,8 +434,8 @@ def run_test_dlae(pos_cfg, lr_cfg, loader, clip_model, clip_weights, dataset_nam
         #用来统计每一个类别被预测的伪标签数量，比counter少1
         conf_count= Init_confcount(cache_size, my_device)
         weights0=clip_weights.clone()
-
-
+        cache_counter =[0,0]
+        in_counter=torch.zeros(cache_size, device=my_device)
 
         # Test-time adaptation
         for i, (images, target) in enumerate(tqdm(loader, desc='Processed test images: ')):
@@ -414,7 +521,8 @@ def run_test_dlae(pos_cfg, lr_cfg, loader, clip_model, clip_weights, dataset_nam
                     final_logits += compute_cache_logits(image_features, new_pos_cache_keys, pos_cache_values,
                                                          pos_params['alpha'], pos_params['beta'], clip_weights)
 
-
+                    #cache_logits2=compute_cache_logits(image_features, pos_cache_keys, pos_cache_values,
+                                                         #pos_params['alpha'], pos_params['beta'], clip_weights)
                 acc = cls_acc(final_logits, target.cuda())
 
 
@@ -424,14 +532,19 @@ def run_test_dlae(pos_cfg, lr_cfg, loader, clip_model, clip_weights, dataset_nam
 
                 loss = avg_entropy(final_logits)
 
-
+                # Global update step: textual prototype evolution
+                # lam = 0.99
+                # clip_weights_global = sum([w * clip for w, clip in zip(weights, all_clip_weights)])
                 if get_entropy(loss, clip_weights) < 0.1:
-
-
+                    # Full Update
+                    # clip_weights_global = new_clip_weights
+                    # Cumalative Avg
                     num_avg += 1
                     clip_weights_global = clip_weights_global * (num_avg / (num_avg + 1)) + new_clip_weights * (
                                 1 / (num_avg + 1))
-
+                    # clip_weights_global = clip_weights_global / clip_weights_global.norm(dim=0)
+                    # Exponential Avg
+                    # clip_weights_global = clip_weights_global * lam + new_clip_weights * (1 - lam)
 
             if i % 1000 == 0:
                 print("---- DPE's test accuracy: {:.2f}. ----\n".format(sum(accuracies) / len(accuracies)))
@@ -440,7 +553,7 @@ def run_test_dlae(pos_cfg, lr_cfg, loader, clip_model, clip_weights, dataset_nam
     
 
 
-    return sum(accuracies) / len(accuracies)
+    return sum(accuracies) / len(accuracies),in_counter,all_counter
 
 
 def main():

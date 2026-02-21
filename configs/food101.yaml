@@ -14,7 +14,7 @@ learning_rate:
 
 alpha: [ 3.5 ]
 
-epoch : [5e-3, 5e-3]
+epoch : [0.005, 0.005]
 
 alpha1 : [0.5,0.5]
 belta : [ 3 ]
