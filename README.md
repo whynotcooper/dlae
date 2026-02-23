@@ -29,23 +29,27 @@ All experiments are conducted with **PyTorch 2.3.1 (cu121)** and **CUDA 12.1**. 
 To set up all required datasets, kindly refer to the guidance in [DATASETS.md](docs/DATASETS.md), which incorporates steps for installing two benchmarks.
 
 ## 📦Usage
+To run the code, you can execute the following 4 bash scripts:
 
-To run the code, you can execute the following 2 bash scripts:
-
-```####
-
-* **ResNet50**: Run DLAE on the Cross-Domain Benchmark using the ResNet-50 model:
-
+#### Robustness to Natural Distribution Shifts
+* **ResNet50**: Run DPE on the OOD Benchmark using the ResNet-50 model:
+```
+bash ./scripts/run_ood_benchmark_rn50.sh 
+```
+* **ViT/B-16**: Run DPE on the OOD Benchmark using the ViT/B-16 model.
+```
+bash ./scripts/run_ood_benchmark_vit.sh 
 ```
 
-bash ./scripts/run_cd_benchmark_rn50.sh
-
+#### Cross-Datasets Generalization
+* **ResNet50**: Run DPE on the Cross-Domain Benchmark using the ResNet-50 model:
 ```
-* **ViT/B-16**: Run DLAE on the Cross-Domain Benchmark using the ViT/B-16 model.
-
+bash ./scripts/run_cd_benchmark_rn50.sh 
 ```
-
-bash ./scripts/run_cd_benchmark_vit.sh
+* **ViT/B-16**: Run DPE on the Cross-Domain Benchmark using the ViT/B-16 model.
+```
+bash ./scripts/run_cd_benchmark_vit.sh 
+```
 
 #### Arguments
 
