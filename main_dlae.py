@@ -478,28 +478,22 @@ def main():
             run_name = f"{dataset_name}"
             run = wandb.init(project="ETTA-CLIP", config=cfg, group=group_name, name=run_name)
         test_loader, classnames, template, cupl_path = build_test_data_loader(dataset_name, args.data_root, preprocess)
-        max_acc=0  
-        max_alpha=0 
-        result=[] 
+
         if args.backbone=='RN50':
-         for alpha in cfg['alpha']:
+
 
 
            clip_weights = clip_classifier(classnames, template, cupl_path, clip_model, args.coop, args.backbone)
-           #print(cfg['epoch'][0])
-           acc,in_counter1,all_counter1=run_test_dlae(cfg['positive'], cfg['learning_rate'], test_loader, clip_model, clip_weights, dataset_name,cfg['alpha'][0],cfg['alpha1'][0],cfg['epoch'][0])
-           #result.append([alpha,alpha1,acc])
-           #print(f'the para of alpha :{alpha} alpha1:{alpha1} acc{acc}')
+
+           acc=run_test_dlae(cfg['positive'], cfg['learning_rate'], test_loader, clip_model, clip_weights, dataset_name,cfg['alpha'][0],cfg['alpha1'][0],cfg['epoch'][0])
+
            
         if args.backbone=='ViT-B/16':
-            for belta in cfg['belta']:
 
-                max_acc=0  
-                clip_weights = clip_classifier(classnames, template, cupl_path, clip_model, args.coop,dataset_name,args.backbone)
-                acc=run_test_dlae(cfg['positive'], cfg['learning_rate'], test_loader, clip_model, clip_weights, dataset_name,cfg['belta'][0],cfg['alpha1'][1], cfg['epoch'][1])
 
-                random.seed(1)
-                torch.manual_seed(1)
+            clip_weights = clip_classifier(classnames, template, cupl_path, clip_model, args.coop,dataset_name,args.backbone)
+            acc=run_test_dlae(cfg['positive'], cfg['learning_rate'], test_loader, clip_model, clip_weights, dataset_name,cfg['belta'][0],cfg['alpha1'][1], cfg['epoch'][1])
+
 
         if args.wandb:
               wandb.log({f"{dataset_name}": acc})

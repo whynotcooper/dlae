@@ -4,14 +4,17 @@
 
 # [CVPR 2026] DLAE
 
-[![Website](https://img.shields.io/badge/Project-Website-green)](https://zhangce01.github.io/DPE-CLIP/)
-[![arXiv](https://img.shields.io/badge/arXiv-2410.12790-red)](http://arxiv.org/abs/2410.12790)
-[![Conference](https://img.shields.io/badge/NeurIPS-2024-blue)](https://neurips.cc/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+> [![Website](https://img.shields.io/badge/Project-Website-green)](https://zhangce01.github.io/DPE-CLIP/)
+> [![Conference](https://img.shields.io/badge/CVPR-2026-blue)](https://cvpr.thecvf.com/)
+> [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## 👀Introduction
 
-This repository contains the code for our CVPR 2026 paper `Dual Prototype Evolving for Test-Time Generalization of Vision-Language Models`. [[Paper](https://arxiv.org/abs/2410.12790)]
+This repository contains the code for our CVPR 2026 paper .
+
+
+|  | [Dynamic Logits Adjustment and Exploration for Test-Time Adaptation in Vision Language Models](https://openreview.net/forum?id=C6BQ47FEGg&referrer=%5BAuthor%20Console%5D(%2Fgroup%3Fid%3Dthecvf.com%2FCVPR%2F2026%2FConference%2FAuthors%23your-submissions)) |
+| - | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 
 ![](docs/overview.png)
 
@@ -27,46 +30,33 @@ To set up all required datasets, kindly refer to the guidance in [DATASETS.md](d
 
 ## 📦Usage
 
-To run the code, you can execute the following 4 bash scripts:
+To run the code, you can execute the following 2 bash scripts:
 
-#### Robustness to Natural Distribution Shifts
-
-* **ResNet50**: Run DPE on the OOD Benchmark using the ResNet-50 model:
-
-```
-bash ./scripts/run_ood_benchmark_rn50.sh 
-```
-
-* **ViT/B-16**: Run DPE on the OOD Benchmark using the ViT/B-16 model.
-
-```
-bash ./scripts/run_ood_benchmark_vit.sh 
-```
-
-#### Cross-Datasets Generalization
+```####
 
 * **ResNet50**: Run DLAE on the Cross-Domain Benchmark using the ResNet-50 model:
 
 ```
-bash ./scripts/run_cd_benchmark_rn50.sh 
-```
 
+bash ./scripts/run_cd_benchmark_rn50.sh
+
+```
 * **ViT/B-16**: Run DLAE on the Cross-Domain Benchmark using the ViT/B-16 model.
 
 ```
-bash ./scripts/run_cd_benchmark_vit.sh 
-```
 
+bash ./scripts/run_cd_benchmark_vit.sh
+
+```
 #### Arguments
 
 In each bash script, you can modify the following arguments: (1) `--datasets` to specify the datasets, (2) `--backbone` to specify the backbone model (RN50 and ViT-B/16) .
 
-
 ## 🙏Acknowledgements
 
-Our codebase is adapted from  [CLIP](https://github.com/openai/CLIP/tree/main/clip), [TDA](https://github.com/kdiAAA/TDA), [TPT](https://github.com/azshue/TPT),  [CuPL](https://github.com/sarahpratt/CuPL) and [zhangce01/DPE-CLIP: [NeurIPS 2024] Code for Dual Prototype Evolving for Test-Time Generalization of Vision-Language Models](https://github.com/zhangce01/DPE-CLIP) . We thank the authors for releasing their code!
-
+Our codebase is adapted from  [CLIP](https://github.com/openai/CLIP/tree/main/clip), [TDA](https://github.com/kdiAAA/TDA), [TPT](https://github.com/azshue/TPT),  [CuPL](https://github.com/sarahpratt/CuPL) and [DPE-CLIP](https://github.com/zhangce01/DPE-CLIP) . We thank the authors for releasing their code!
 
 ## 📌 BibTeX & Citation
 
 If you find this code useful, please consider citing our work:
+```
