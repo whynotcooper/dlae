@@ -4,7 +4,7 @@
 
 # [CVPR 2026] DLAE
 
-> [![Website](https://img.shields.io/badge/Project-Website-green)](https://zhangce01.github.io/DPE-CLIP/)
+> [![Website](https://img.shields.io/badge/Project-Website-green)](https://github.com/whynotcooper/dlae)
 > [![Conference](https://img.shields.io/badge/CVPR-2026-blue)](https://cvpr.thecvf.com/)
 > [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -13,8 +13,8 @@
 This repository contains the code for our CVPR 2026 paper .
 
 
-|  | [Dynamic Logits Adjustment and Exploration for Test-Time Adaptation in Vision Language Models](https://openreview.net/forum?id=C6BQ47FEGg&referrer=%5BAuthor%20Console%5D(%2Fgroup%3Fid%3Dthecvf.com%2FCVPR%2F2026%2FConference%2FAuthors%23your-submissions)) |
-| - | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|  | [Dynamic Logits Adjustment and Exploration for Test-Time Adaptation in Vision Language Models](https://openreview.net/forum?id=C6BQ47FEGg) |
+| - | ------------------------------------------------------------------------------------------------------------------------------------------ |
 
 ![](docs/overview.png)
 
@@ -47,16 +47,25 @@ bash ./scripts/run_cd_benchmark_rn50.sh
 
 bash ./scripts/run_cd_benchmark_vit.sh
 
-```
 #### Arguments
 
-In each bash script, you can modify the following arguments: (1) `--datasets` to specify the datasets, (2) `--backbone` to specify the backbone model (RN50 and ViT-B/16) .
+In each bash script, you can modify the following arguments: (1) `--datasets` to specify the datasets, and (2) `--backbone` to specify the backbone model (e.g., RN50 and ViT-B/16).
 
-## 🙏Acknowledgements
+## 🙏 Acknowledgements
 
-Our codebase is adapted from  [CLIP](https://github.com/openai/CLIP/tree/main/clip), [TDA](https://github.com/kdiAAA/TDA), [TPT](https://github.com/azshue/TPT),  [CuPL](https://github.com/sarahpratt/CuPL) and [DPE-CLIP](https://github.com/zhangce01/DPE-CLIP) . We thank the authors for releasing their code!
+Our codebase is based on [CLIP](https://github.com/openai/CLIP/tree/main/clip), [TDA](https://github.com/kdiAAA/TDA), [TPT](https://github.com/azshue/TPT), [CuPL](https://github.com/sarahpratt/CuPL), and [DPE-CLIP](https://github.com/zhangce01/DPE-CLIP). We sincerely thank the authors for their open-source contributions.
 
 ## 📌 BibTeX & Citation
 
-If you find this code useful, please consider citing our work:
+If you find this code or our paper helpful for your research, please consider citing:
+
 ```
+
+@inproceedings{dlae2026,
+  title     = {Dynamic Logits Adjustment and Exploration for Test-Time Adaptation in Vision Language Models},
+  author    = {Haoyan WU, Yahao Liu, Yinjie Lei, Lixin Duan, Wen Li },
+  booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year      = {2026}
+}
+
+
