@@ -51,19 +51,6 @@ def InfoNCELoss(A, B):
     return loss(A, B)
 
 
-def update_cache(cache, pred, features_loss, shot_capacity, include_prob_map=False):
-    """Update cache with new features and loss, maintaining the maximum shot capacity."""
-    with torch.no_grad():
-        item = features_loss if not include_prob_map else features_loss[:2] + [features_loss[2]]
-        if pred in cache:
-            if len(cache[pred]) < shot_capacity:
-                cache[pred].append(item)
-            elif features_loss[1] < cache[pred][-1][1]:
-                cache[pred][-1] = item
-            cache[pred] = sorted(cache[pred], key=operator.itemgetter(1))
-        else:
-            cache[pred] = [item]
-        return
  
 
 def visualize_cache(cache, iter):
@@ -251,7 +238,7 @@ def check_doubt(now_weights,weights0,image_featurs):
     else:
         return False
 
-def update_cache3(cache, pred, features_loss_time_doubt,time_now, shot_capacity, include_prob_map=False,alpha=200,clip_weights=None,weights0=None):
+def update_cache(cache, pred, features_loss_time_doubt,time_now, shot_capacity, include_prob_map=False,alpha=200,clip_weights=None,weights0=None):
     """Update cache with new features and loss, maintaining the maximum shot capacity."""
     with torch.no_grad():
         # 如果include_prob_map为False，则item为features_loss_time_doubt，否则item为features_loss_time_doubt的前两项加上features_loss_time_doubt的第三项
@@ -345,7 +332,7 @@ def run_test_dlae(pos_cfg, lr_cfg, loader, clip_model, clip_weights, dataset_nam
             if pos_enabled:
 
        
-                update_cache3(pos_cache, pred, [image_features_x, entropy1,i,True],i,pos_params['shot_capacity'],alpha=epoch,clip_weights=new_clip_weights,weights0=weights0)
+                update_cache(pos_cache, pred, [image_features_x, entropy1,i,True],i,pos_params['shot_capacity'],alpha=epoch,clip_weights=new_clip_weights,weights0=weights0)
 
                 #     visualize_cache(pos_cache, i)
             # if i != 0 and i % 1000 == 0:
@@ -476,7 +463,7 @@ def main():
         print(args.backbone)
         if args.wandb:
             run_name = f"{dataset_name}"
-            run = wandb.init(project="ETTA-CLIP", config=cfg, group=group_name, name=run_name)
+            run = wandb.init(project="DLAE", config=cfg, group=group_name, name=run_name)
         test_loader, classnames, template, cupl_path = build_test_data_loader(dataset_name, args.data_root, preprocess)
 
         if args.backbone=='RN50':
