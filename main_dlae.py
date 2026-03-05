@@ -18,7 +18,7 @@ from utils import *
 import os
 import open_clip
 
-#os.environ["WANDB_MODE"] = "offline"   # 离线  （此行代码不用修改）
+#os.environ["WANDB_MODE"] = "offline"   # Offline mode (do not modify this line)
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -50,8 +50,6 @@ def InfoNCELoss(A, B):
     loss = InfoNCE(temperature=0.01, reduction='mean')
     return loss(A, B)
 
-
- 
 
 def visualize_cache(cache, iter):
     # t-SNE visualization of cache features
@@ -142,13 +140,13 @@ def cache_key_value(image_features, cache, alpha, beta, clip_weights):
         all_classes = []
         for class_index in sorted(cache.keys()):
             num_items = len(cache[class_index])
-            # Compute the prototype of the class
+            # Compute the class prototype
             image_prototype = torch.zeros_like(image_features)
-            count=0
+            count = 0
             for item in cache[class_index]:
-             if count<=2:
-                image_prototype += item[0] / num_items
-                count=count+1
+                if count <= 2:
+                    image_prototype += item[0] / num_items
+                    count = count + 1
             cache_keys.append(image_prototype)
             cache_values.append(class_index)
             all_classes.append(class_index)
@@ -167,18 +165,17 @@ def compute_cache_logits(image_features, cache_keys, cache_values, alpha, beta, 
 
 
 def exp_loss(x, time, alpha):
-    # 确保 x, time, alpha 都是 PyTorch 张量
+    # Ensure x, time, alpha are all PyTorch tensors
     x = torch.tensor(x) if not isinstance(x, torch.Tensor) else x
     time = torch.tensor(time) if not isinstance(time, torch.Tensor) else time
     alpha = torch.tensor(alpha) if not isinstance(alpha, torch.Tensor) else alpha
-    
+
     return x * torch.exp(time * alpha)
 
 def compute_cache_logits(image_features, cache_keys, cache_values, alpha, beta, clip_weights):
     affinity = image_features @ cache_keys
     cache_logits = ((-1) * (beta - beta * affinity)).exp() @ cache_values
     return alpha * cache_logits
-
 
 
 class TextResidue(nn.Module):
@@ -220,6 +217,7 @@ class SmoothCrossEntropy(nn.Module):
                        (1. - self.alpha) + alpha_div_k
         loss = -(target_probs * torch.log_softmax(logits, dim=-1)).sum(dim=-1)
         return loss.mean()
+
 def Init_conf(cache_size, my_device):
     conf_count = torch.zeros((cache_size,), device=my_device, requires_grad=False)
     return conf_count
@@ -228,73 +226,66 @@ def Init_confcount(cache_size, my_device):
     conf_count = torch.zeros((cache_size,), device=my_device, requires_grad=False)
     return conf_count
 
-def update_mean_conf(conf_count,pred,count,conf):
-    #用来更新置信度
-    conf_count[pred]=(conf_count[pred]*count[pred]+conf)/(count[pred]+1)
-    count[pred]=count[pred]+1
-def check_doubt(now_weights,weights0,image_featurs):
-    if image_featurs@now_weights<image_featurs@weights0:
+def update_mean_conf(conf_count, pred, count, conf):
+    # Used to update the confidence
+    conf_count[pred] = (conf_count[pred] * count[pred] + conf) / (count[pred] + 1)
+    count[pred] = count[pred] + 1
+
+def check_doubt(now_weights, weights0, image_featurs):
+    if image_featurs @ now_weights < image_featurs @ weights0:
         return True
     else:
         return False
 
-def update_cache(cache, pred, features_loss_time_doubt,time_now, shot_capacity, include_prob_map=False,alpha=200,clip_weights=None,weights0=None):
+def update_cache(cache, pred, features_loss_time_doubt, time_now, shot_capacity,
+                 include_prob_map=False, alpha=200, clip_weights=None, weights0=None):
     """Update cache with new features and loss, maintaining the maximum shot capacity."""
     with torch.no_grad():
-        # 如果include_prob_map为False，则item为features_loss_time_doubt，否则item为features_loss_time_doubt的前两项加上features_loss_time_doubt的第三项
+        # If include_prob_map is False, item is features_loss_time_doubt;
+        # otherwise item is the first two elements plus the third element (prob map)
         item = features_loss_time_doubt if not include_prob_map else features_loss_time_doubt[:2] + [features_loss_time_doubt[2]]
-        # 如果pred在cache中
+        # If pred exists in cache
         if pred in cache:
-            # 如果cache中的pred的长度小于shot_capacity
+            # If the number of items under pred is less than shot_capacity
             if len(cache[pred]) < shot_capacity:
-                # 将item添加到cache中的pred
+                # Append item to the cache for this pred
                 cache[pred].append(item)
             else:
-                # 遍历cache中的pred
-            
-               for i in range(len(cache[pred])):
-                   # 如果cache中的pred的最后一个元素为True
-                      # 检查doubt
-                 
-                  if cache[pred][i][-1]==True:
-                      doubt=check_doubt(clip_weights.mT[pred],weights0.mT[pred],cache[pred][i][0])
-                      
-                      # 如果doubt为True
-                      if doubt:
-                          # 计算exp_loss
+                # Traverse items under this pred
+                for i in range(len(cache[pred])):
+                    # If the last element in this cache item is True
+                    # Check doubt
 
-                          cache[pred][i][1]=exp_loss(cache[pred][i][1],time_now-cache[pred][i][2],alpha)
-                          # 更新时间
+                    if cache[pred][i][-1] == True:
+                        doubt = check_doubt(clip_weights.mT[pred], weights0.mT[pred], cache[pred][i][0])
 
-                          cache[pred][i][2] = time_now
-                          
-                          
+                        # If doubt is True
+                        if doubt:
+                            # Compute exp_loss
+                            cache[pred][i][1] = exp_loss(cache[pred][i][1], time_now - cache[pred][i][2], alpha)
+                            # Update time
+                            cache[pred][i][2] = time_now
 
-                # 对cache中的pred按照第二个元素进行排序
-               cache[pred] = sorted(cache[pred], key=operator.itemgetter(1))
-               # 如果features_loss_time_doubt的第二个元素小于cache中的pred的最后一个元素的第二个元素
-               if features_loss_time_doubt[1] < cache[pred][-1][1]:
-                   # 将cache中的pred的最后一个元素替换为item
-                   cache[pred][-1] = item
-                   # 对cache中的pred按照第二个元素进行排序
-                   cache[pred] = sorted(cache[pred], key=operator.itemgetter(1))
+                # Sort cache[pred] by the second element
+                cache[pred] = sorted(cache[pred], key=operator.itemgetter(1))
+                # If the new item's loss is smaller than the largest loss in cache[pred]
+                if features_loss_time_doubt[1] < cache[pred][-1][1]:
+                    # Replace the last element with the new item
+                    cache[pred][-1] = item
+                    # Sort again by the second element
+                    cache[pred] = sorted(cache[pred], key=operator.itemgetter(1))
 
         else:
-            # 如果pred不在cache中，将item添加到cache中的pred
+            # If pred is not in cache, create a new list with this item
             cache[pred] = [item]
         return
- 
 
 
-
- 
-         
-def run_test_dlae(pos_cfg, lr_cfg, loader, clip_model, clip_weights, dataset_name,alpha,alpha1,epoch):
+def run_test_dlae(pos_cfg, lr_cfg, loader, clip_model, clip_weights, dataset_name, alpha, alpha1, epoch):
     with torch.cuda.amp.autocast():
         pos_cache, accuracies = {}, []
 
-        
-        my_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')  # 检查是否有GPU可用
+        my_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')  # Check if GPU is available
         # Unpack all hyperparameters
         pos_enabled = pos_cfg['enabled']
 
@@ -305,60 +296,60 @@ def run_test_dlae(pos_cfg, lr_cfg, loader, clip_model, clip_weights, dataset_nam
         num_avg = 0
 
         cache_size = clip_weights.shape[1]
-        # 用来统计每一个类别的伪标签数量
+        # Used to count the number of pseudo-labels for each class
         counter = Init_counter(cache_size, my_device)
-        #用来统计总数
+        # Used to count the total number
         count = torch.tensor(cache_size, device=my_device)
-        #用来统计每一个类别平均的置信度
-        conf_counter= Init_conf(cache_size,my_device)
-        #用来统计每一个类别被预测的伪标签数量，比counter少1
-        conf_count= Init_confcount(cache_size, my_device)
-        weights0=clip_weights.clone()
-
-
+        # Used to record the average confidence for each class
+        conf_counter = Init_conf(cache_size, my_device)
+        # Used to count how many times each class is predicted (one less than counter)
+        conf_count = Init_confcount(cache_size, my_device)
+        weights0 = clip_weights.clone()
 
         # Test-time adaptation
         for i, (images, target) in enumerate(tqdm(loader, desc='Processed test images: ')):
             clip_weights_local = clip_weights_global.clone().detach()
             text_residue = TextResidue(clip_weights_local)
             new_clip_weights = text_residue(clip_weights_local)
-            # we need to adjust
-            image_features_x, clip_logits, entropy, prob_map, pred ,doubt,features_all,entropy1= get_clip_logits_2(images, clip_model,
-                                                                                       new_clip_weights, counter, count,alpha,conf_counter,alpha1)
+            # We need to adjust
+            image_features_x, clip_logits, entropy, prob_map, pred, doubt, features_all, entropy1 = get_clip_logits(
+                images, clip_model, new_clip_weights, counter, count, alpha, conf_counter, alpha1
+            )
             target = target.cuda()
             counter = update_counter(counter, pred)
             count = count + 1
-            update_mean_conf(conf_counter,pred,conf_count,prob_map.squeeze(0)[pred].detach().cpu().item())   
+            update_mean_conf(conf_counter, pred, conf_count, prob_map.squeeze(0)[pred].detach().cpu().item())
+
             if pos_enabled:
+                update_cache(
+                    pos_cache, pred, [image_features_x, entropy1, i, True],
+                    i, pos_params['shot_capacity'],
+                    alpha=epoch, clip_weights=new_clip_weights, weights0=weights0
+                )
 
-       
-                update_cache(pos_cache, pred, [image_features_x, entropy1,i,True],i,pos_params['shot_capacity'],alpha=epoch,clip_weights=new_clip_weights,weights0=weights0)
+                # visualize_cache(pos_cache, i)
 
-                #     visualize_cache(pos_cache, i)
-            # if i != 0 and i % 1000 == 0:
-                
-                pos_cache_keys, pos_cache_values, all_classes = cache_key_value(image_features_x, pos_cache,
-                                                                                pos_params['alpha'], pos_params['beta'],
-                                                                                clip_weights)
+                pos_cache_keys, pos_cache_values, all_classes = cache_key_value(
+                    image_features_x, pos_cache, pos_params['alpha'], pos_params['beta'], clip_weights
+                )
 
-                # if i != 0 and i % 1000 == 0:
-                #     visualize_cache(pos_cache, i)
-            # if i != 0 and i % 1000 == 0:
+                # visualize_cache(pos_cache, i)
+
                 pos_cache_residue = PositiveCacheResidue(pos_cache_keys)
-   
-                # if i != 0 and i % 1000 == 0:
-                #     visualize_cache(pos_cache, i)
-            steps = 1  # Update step, set to 1 in default
+
+            steps = 1  # Update step, set to 1 by default
             for j in range(steps):
                 new_clip_weights = text_residue(clip_weights_local)
                 final_logits = clip_logits.clone()
                 if pos_enabled and pos_cache:
                     new_pos_cache_keys = pos_cache_residue(pos_cache_keys)
- 
-                    final_logits += compute_cache_logits(image_features_x, new_pos_cache_keys, pos_cache_values,
-                                                         pos_params['alpha'], pos_params['beta'], clip_weights)
+
+                    final_logits += compute_cache_logits(
+                        image_features_x, new_pos_cache_keys, pos_cache_values,
+                        pos_params['alpha'], pos_params['beta'], clip_weights
+                    )
                     loss = avg_entropy(final_logits)
-                    # alignment loss
+                    # Alignment loss
                     image2text_loss = InfoNCELoss(new_pos_cache_keys.T, new_clip_weights[:, all_classes].T)
                     loss += image2text_loss * lr_cfg['align']
                 else:
@@ -390,42 +381,36 @@ def run_test_dlae(pos_cfg, lr_cfg, loader, clip_model, clip_weights, dataset_nam
             with torch.no_grad():
                 new_clip_weights = text_residue(clip_weights_local)
                 if dataset_name == 'A':
-                    image_features, clip_logits, _, _, _,_ = get_clip_logits_3(features_all, clip_model, new_clip_weights,
-                                                                             counter, count,alpha,conf_counter,alpha1)
+                    image_features, clip_logits, _, _, _, _ = get_clip_logits_2(
+                        features_all, clip_model, new_clip_weights, counter, count, alpha, conf_counter, alpha1
+                    )
                 else:
-                    image_features, clip_logits, _, _, _,_ = get_clip_logits_3(features_all[0], clip_model, new_clip_weights,
-                                                                             counter, count,alpha,conf_counter,alpha1)
+                    image_features, clip_logits, _, _, _, _ = get_clip_logits_2(
+                        features_all[0], clip_model, new_clip_weights, counter, count, alpha, conf_counter, alpha1
+                    )
                 final_logits = clip_logits.clone()
                 if pos_enabled and pos_cache:
                     new_pos_cache_keys = pos_cache_residue(pos_cache_keys)
-                    final_logits += compute_cache_logits(image_features, new_pos_cache_keys, pos_cache_values,
-                                                         pos_params['alpha'], pos_params['beta'], clip_weights)
-
+                    final_logits += compute_cache_logits(
+                        image_features, new_pos_cache_keys, pos_cache_values,
+                        pos_params['alpha'], pos_params['beta'], clip_weights
+                    )
 
                 acc = cls_acc(final_logits, target.cuda())
-
-
 
                 accuracies.append(acc)
                 wandb.log({"Averaged test accuracy": sum(accuracies) / len(accuracies)}, commit=True)
 
                 loss = avg_entropy(final_logits)
 
-
                 if get_entropy(loss, clip_weights) < 0.1:
-
-
                     num_avg += 1
                     clip_weights_global = clip_weights_global * (num_avg / (num_avg + 1)) + new_clip_weights * (
-                                1 / (num_avg + 1))
-
+                        1 / (num_avg + 1))
 
             if i % 1000 == 0:
                 print("---- DPE's test accuracy: {:.2f}. ----\n".format(sum(accuracies) / len(accuracies)))
     print("---- DPE's test accuracy: {:.2f}. ----\n".format(sum(accuracies) / len(accuracies)))
-
-    
-
 
     return sum(accuracies) / len(accuracies)
 
@@ -466,27 +451,25 @@ def main():
             run = wandb.init(project="DLAE", config=cfg, group=group_name, name=run_name)
         test_loader, classnames, template, cupl_path = build_test_data_loader(dataset_name, args.data_root, preprocess)
 
-        if args.backbone=='RN50':
+        if args.backbone == 'RN50':
+            clip_weights = clip_classifier(classnames, template, cupl_path, clip_model, args.coop, args.backbone)
+            acc = run_test_dlae(
+                cfg['positive'], cfg['learning_rate'], test_loader, clip_model, clip_weights,
+                dataset_name, cfg['alpha'][0], cfg['alpha1'][0], cfg['epoch'][0]
+            )
 
-
-
-           clip_weights = clip_classifier(classnames, template, cupl_path, clip_model, args.coop, args.backbone)
-
-           acc=run_test_dlae(cfg['positive'], cfg['learning_rate'], test_loader, clip_model, clip_weights, dataset_name,cfg['alpha'][0],cfg['alpha1'][0],cfg['epoch'][0])
-
-           
-        if args.backbone=='ViT-B/16':
-
-
-            clip_weights = clip_classifier(classnames, template, cupl_path, clip_model, args.coop,dataset_name,args.backbone)
-            acc=run_test_dlae(cfg['positive'], cfg['learning_rate'], test_loader, clip_model, clip_weights, dataset_name,cfg['belta'][0],cfg['alpha1'][1], cfg['epoch'][1])
-
+        if args.backbone == 'ViT-B/16':
+            clip_weights = clip_classifier(classnames, template, cupl_path, clip_model, args.coop, dataset_name, args.backbone)
+            acc = run_test_dlae(
+                cfg['positive'], cfg['learning_rate'], test_loader, clip_model, clip_weights,
+                dataset_name, cfg['belta'][0], cfg['alpha1'][1], cfg['epoch'][1]
+            )
 
         if args.wandb:
-              wandb.log({f"{dataset_name}": acc})
-              run.finish()
-        
+            wandb.log({f"{dataset_name}": acc})
+            run.finish()
 
-# 确保目录存在
+
+# Ensure the entry point
 if __name__ == "__main__":
     main()
