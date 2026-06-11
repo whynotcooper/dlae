@@ -10,11 +10,7 @@
 
 ## 👀Introduction
 
-This repository contains the code for our CVPR 2026 paper .
-
-
-|  | [Dynamic Logits Adjustment and Exploration for Test-Time Adaptation in Vision Language Models](https://openaccess.thecvf.com/content/CVPR2026/papers/Wu_Dynamic_Logits_Adjustment_and_Exploration_for_Test-Time_Adaptation_in_Vision_CVPR_2026_paper.pdf) |
-| - | ------------------------------------------------------------------------------------------------------------------------------------------ |
+This repository contains the code for our CVPR 2026 paper: [**Dynamic Logits Adjustment and Exploration for Test-Time Adaptation in Vision Language Models**](https://openaccess.thecvf.com/content/CVPR2026/papers/Wu_Dynamic_Logits_Adjustment_and_Exploration_for_Test-Time_Adaptation_in_Vision_CVPR_2026_paper.pdf).
 
 ![](docs/overview.png)
 
